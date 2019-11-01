@@ -184,7 +184,7 @@ def cached_file(path: str, root: str = os_getcwd(), max_age: int = 38400) -> byt
 
 
 def response(
-    body: Union[str, bytes],
+    body: Union[str, bytes, None],
     code: int = 200,
     content_type: str = "text/html",
     headers: Optional[dict] = None,
