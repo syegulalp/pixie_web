@@ -193,25 +193,24 @@ def response(
     Generate a response object (a byte stream) from either a string or a bytes object. Use `content_type` to set the Content-Type: header, `code` to set the HTTP response code, and pass a dict to `headers` to set other headers as needed.
     """
 
+    if body is None:
+        body = b""
+    else:
+        if type(body) is str:
+            body = body.encode("utf-8")
+        length = len(body)
+        if not headers:
+            headers = {}
+        headers["Content-Length"] = length
+
     if headers is not None:
         headers = "\n" + "\n".join([f"{k}: {v}" for k, v in headers.items()])
     else:
         headers = ""
 
-    if body is None:
-        return bytes(
-            f"HTTP/1.1 {code} {http_codes[code]}\nContent-Type: {content_type}{headers}\n\n",
-            "utf-8",
-        )
-
-    if type(body) is str:
-        body = body.encode("utf-8")
-
-    length = len(body)
-
     return (
         bytes(
-            f"HTTP/1.1 {code} {http_codes[code]}\nContent-Type: {content_type}\nContent-Length: {length}{headers}\n\n",
+            f"HTTP/1.1 {code} {http_codes[code]}\nContent-Type: {content_type}{headers}\n\n",
             "utf-8",
         )
         + body
