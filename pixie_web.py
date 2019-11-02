@@ -1,4 +1,4 @@
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Type, cast
 
 DEFAULT_TIMEOUT = 15.0
 FILE_CACHE_SIZE = 256
@@ -66,7 +66,7 @@ class Env:
     def __init__(
         self,
         headers: Optional[bytes] = None,
-        proc_type: ProcessType = ProcessType.main,
+        proc_type: Enum = ProcessType.main,
     ):
         self.raw_headers = headers
         self.headers = self._form = None
@@ -186,7 +186,7 @@ def cached_file(path: str, root: str = os_getcwd(), max_age: int = 38400) -> byt
 def response(
     body: Union[str, bytes, None],
     code: int = 200,
-    content_type: str = "text/html",
+    content_type: Optional[str] = "text/html",
     headers: Optional[dict] = None,
 ) -> bytes:
     """
@@ -197,24 +197,24 @@ def response(
         body = b""
     else:
         if type(body) is str:
-            body = body.encode("utf-8")
+            body = body.encode("utf-8") # type: ignore
         length = len(body)
         if not headers:
             headers = {}
         headers["Content-Length"] = length
 
     if headers is not None:
-        headers = "\n" + "\n".join([f"{k}: {v}" for k, v in headers.items()])
+        header_str = "\n" + "\n".join([f"{k}: {v}" for k, v in headers.items()])
     else:
-        headers = ""
+        header_str = ""
 
     return (
-        bytes(
-            f"HTTP/1.1 {code} {http_codes[code]}\nContent-Type: {content_type}{headers}\n\n",
+        bytes( # type: ignore
+            f"HTTP/1.1 {code} {http_codes[code]}\nContent-Type: {content_type}{header_str}\n\n",
             "utf-8",
         )
         + body
-    )
+    ) 
 
 
 def header(
@@ -305,7 +305,7 @@ def run_route_pool(raw_env: bytes, func: Callable, *a, **ka):
 
 
 def run_route_pool_stream(
-    remote_queue: Queue, signal: Event, raw_env: bytes, func: Callable, *a, **ka
+    remote_queue: Queue, signal, raw_env: bytes, func: Callable, *a, **ka
 ):
     """
     Execute a function synchronously in the process pool, and return results from it incrementally.
@@ -513,7 +513,7 @@ def use_process_pool(workers: Optional[int] = None):
         )
         pool = None
     else:
-        _e(f"Using {pool._max_workers} processes")
+        _e(f"Using {pool._max_workers} processes") # type: ignore
 
 
 srv = None
@@ -535,7 +535,7 @@ async def start_server(host: str, port: int):
     """
     global srv
     srv = await asyncio.start_server(connection_handler, host, port)
-    async with srv:
+    async with srv: # type: ignore
         _e(f"Listening on {host}:{port}")
         await srv.serve_forever()
 
