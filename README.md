@@ -24,23 +24,25 @@ This way, you can quickly direct CPU-reliant traffic to a process pool, I/O-reli
 * In-memory file and template caching, using Python's `functools.lru_cache` (you can require or suppress caching as needed).
 * Verb handlers for routes (`GET/POST`).
 * Form submissions.
+* Incremental/streaming responses in CPU-bound operations by way of `yield`
 * Optional external library support:
   * `uvloop`
 
-## In-progress features
-* File uploads.
-
 There are probably many bugs -- bad conformance to HTTP specs, etc.
 
-Possible future features:
+## In-progress features
 
-* Incremental/streaming responses by way of `yield`
-* Better cross-process synchronicity features. The assumption right now is that processes in the pool have no shared state.
+* File uploads.
+
+## Possible future features
+
+* Before/after triggers for routes.
 * A native, simple template engine (again, a la `bottle`).
 * Cookies and some basic cookie security.
-* Support for external server adapters (WSGI, etc.) instead of only the built-in server
-* Before/after triggers for routes.
+* Support for external server adapters (WSGI, etc.) instead of only the built-in server.
+* Better cross-process synchronicity features. The assumption right now is that processes in the pool have no shared state.
 * ETags.
+* Support for other external libraries:
   * `httptools`
   * `ujson`
 * HTTP/2, HTTP/3, HTTPS support.
