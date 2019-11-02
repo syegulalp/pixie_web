@@ -69,7 +69,7 @@ class PoolEnv:
     """
 
     def __init__(
-        self, proc_type: Enum = ProcessType.main, pool: ProcessPoolExecutor = None
+        self, proc_type: Enum = ProcessType.main, pool: Optional[ProcessPoolExecutor] = None
     ):
         self.proc_type = proc_type
         self.pool = pool
@@ -85,9 +85,9 @@ class Env:
 
     def __init__(
         self,
-        headers: Optional[bytes] = None,
+        headers: bytes
     ):
-        self.raw_headers = headers
+        self.raw_data = headers
         self._headers = self._form = self._body = None
 
     @property
@@ -99,11 +99,11 @@ class Env:
         if self._headers:
             return self._headers
 
-        if b"\r" in self.raw_headers:
-            data = self.raw_headers.decode("utf-8").split("\r\n\r\n")
+        if b"\r" in self.raw_data:
+            data = self.raw_data.decode("utf-8").split("\r\n\r\n")
             hdr = data[0].split("\r\n")
         else:
-            data = self.raw_headers.decode("utf-8").split("\n\n")
+            data = self.raw_data.decode("utf-8").split("\n\n")
             hdr = data[0].split("\n")
 
         header = hdr.pop(0).strip().split(" ")
@@ -140,6 +140,14 @@ class Env:
         return self._body
 
     @property
+    def verb(self):
+        """
+        Returns the verb in the headers.
+        """
+        return self.headers['_VERB']
+
+    
+    @property
     def form(self):
         """
         Provide form data as a dictionary, if available.
@@ -149,9 +157,7 @@ class Env:
         if self._form:
             return self._form
 
-        self.headers
-
-        if self._headers.get("Content-Type") != "application/x-www-form-urlencoded":
+        if self.headers.get("Content-Type") != "application/x-www-form-urlencoded":
             return None
 
         if "\r" in self._body:
@@ -167,8 +173,6 @@ class Env:
 
         return self._form
 
-
-env = Env()
 
 
 @lru_cache(TEMPLATE_CACHE_SIZE)

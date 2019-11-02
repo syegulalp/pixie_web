@@ -22,8 +22,8 @@ def main(env):
 
         data = db["posts"]
 
-        if env.headers["_VERB"] == "POST":
-            value = env.form["name"]
+        if env.verb == "POST":
+            value = env.form["text"]
             if value != "":
                 data.append(value)
                 if len(data) > 5:
@@ -33,7 +33,7 @@ def main(env):
                 msg = "<p>You submitted a blank post. Be more creative.</p>"
 
         text = main_template.format(
-            "<ul>" + "".join([f"<li>{_}</li>" for _ in db["posts"]]) + "</ul>", msg
+            "<ul>" + "".join([f"<li>{_}</li>" for _ in data]) + "</ul>", msg
         )
 
     return response(text)
