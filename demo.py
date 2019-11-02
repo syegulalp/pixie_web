@@ -3,7 +3,7 @@ from pixie_web import (
     run,
     response,
     header,
-    pool_env,
+    proc_env,
     static_file,
     cached_file,
     template,
@@ -24,8 +24,8 @@ def body(env, text):
     return body_template.format(
         text,
         id(env),
-        id(pool_env),
-        pool_env.proc_type,
+        id(proc_env),
+        proc_env.proc_type,
         "".join([f"<li><b>{k}</b>: {v}</li>" for k, v in env.headers.items()]),
         env.form,
     )

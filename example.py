@@ -1,11 +1,11 @@
-from pixie_web import route, run, response, RouteType, pool_env
+from pixie_web import route, run, response, RouteType, proc_env
 
 # Local synchronous
 
 
 @route("/", RouteType.sync)
 def index(env):
-    return response("Hello world")
+    return response(f"Hello world from process type {proc_env.proc_type}")
 
 
 # Local async
@@ -13,7 +13,7 @@ def index(env):
 
 @route("/async", RouteType.asnc)
 async def index_async(env):
-    return response("Hello world async")
+    return response(f"Hello world (async) from process type {proc_env.proc_type}")
 
 
 # Process-pooled (the default)
@@ -24,7 +24,7 @@ def cpu_bound(env):
     from time import sleep
 
     sleep(3)
-    return response("Hello world (CPU-bound operation)")
+    return response(f"Hello world (CPU-bound) from process type {proc_env.proc_type}")
 
 
 if __name__ == "__main__":

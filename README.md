@@ -22,8 +22,13 @@ This way, you can quickly direct CPU-reliant traffic to a process pool, I/O-reli
 * Wildcard routes (e.g., `/route/<filename>`, with `filename` passed to the handler function as an argument).
 * Load files from disk for use as simple templates.
 * In-memory file and template caching, using Python's `functools.lru_cache` (you can require or suppress caching as needed).
-* (In progress) Verb handlers for routes (`GET/POST`).
-* (In progress) Form submissions, file uploads.
+* Verb handlers for routes (`GET/POST`).
+* Form submissions.
+* Optional external library support:
+  * `uvloop`
+
+## In-progress features
+* File uploads.
 
 There are probably many bugs -- bad conformance to HTTP specs, etc.
 
@@ -36,8 +41,6 @@ Possible future features:
 * Support for external server adapters (WSGI, etc.) instead of only the built-in server
 * Before/after triggers for routes.
 * ETags.
-* Optional external library support:
-  * `uvloop`
   * `httptools`
   * `ujson`
 * HTTP/2, HTTP/3, HTTPS support.
@@ -49,15 +52,17 @@ On the whole I'd rather support a few generally useful features well than a lot 
 
 # Example
 
+Run this and open your browser to `localhost:8000`.
+
 ```python
-from pixie_web import route, run, response, RouteType, pool_env
+from pixie_web import route, run, response, RouteType, proc_env
 
 # Local synchronous
 
 
 @route("/", RouteType.sync)
 def index(env):
-    return response("Hello world")
+    return response(f"Hello world from process type {proc_env.proc_type}")
 
 
 # Local async
@@ -65,7 +70,7 @@ def index(env):
 
 @route("/async", RouteType.asnc)
 async def index_async(env):
-    return response("Hello world async")
+    return response(f"Hello world (async) from process type {proc_env.proc_type}")
 
 
 # Process-pooled (the default)
@@ -76,7 +81,7 @@ def cpu_bound(env):
     from time import sleep
 
     sleep(3)
-    return response("Hello world (CPU-bound operation)")
+    return response(f"Hello world (CPU-bound) from process type {proc_env.proc_type}")
 
 
 if __name__ == "__main__":
