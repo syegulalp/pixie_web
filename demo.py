@@ -7,7 +7,7 @@ from pixie_web import (
     static_file,
     cached_file,
     template,
-    RouteType
+    RouteType,
 )
 
 from time import sleep
