@@ -16,7 +16,7 @@ from os import getcwd as os_getcwd, stat as os_stat
 from os.path import join as path_join
 from functools import lru_cache
 from email.utils import formatdate
-from urllib.parse import unquote
+from urllib.parse import unquote_plus
 from mimetypes import guess_type
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Queue, Manager, Event
@@ -69,16 +69,18 @@ class Env:
         proc_type: Enum = ProcessType.main,
     ):
         self.raw_headers = headers
-        self.headers = self._form = None
+        self._headers = self._form = None
         self.proc_type = proc_type
 
-    def as_dict(self):
+    
+    @property
+    def headers(self):
         """
         Provide headers as a dictionary.
         Use cached copy if available.
         """
-        if self.headers:
-            return self.headers
+        if self._headers:
+            return self._headers
 
         if b"\r" in self.raw_headers:
             data = self.raw_headers.decode("utf-8").split("\r\n\r\n")
@@ -89,7 +91,7 @@ class Env:
 
         header = hdr.pop(0).strip().split(" ")
 
-        self.headers = {
+        self._headers = {
             "_VERB": header[0],
             "_PATH": header[1],
             "_PROTOCOL": header[2],
@@ -98,14 +100,15 @@ class Env:
         for _ in hdr:
             _ = _.split(":", 1)
             try:
-                self.headers[_[0]] = _[1].strip()
+                self._headers[_[0]] = _[1].strip()
             except IndexError:
                 pass
 
         self.body = data[1]
 
-        return self.headers
+        return self._headers
 
+    @property
     def form(self):
         """
         Provide form data as a dictionary, if available.
@@ -115,9 +118,9 @@ class Env:
         if self._form:
             return self._form
 
-        self.as_dict()
+        self.headers
 
-        if self.headers.get("Content-Type") != "application/x-www-form-urlencoded":
+        if self._headers.get("Content-Type") != "application/x-www-form-urlencoded":
             return None
 
         if "\r" in self.body:
@@ -129,7 +132,7 @@ class Env:
 
         for _ in form:
             __ = _.split("=")
-            self._form[__[0]] = unquote(__[1])
+            self._form[__[0]] = unquote_plus(__[1])
 
         return self._form
 
