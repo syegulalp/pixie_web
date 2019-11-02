@@ -3,3 +3,4 @@ venv
 **/*.pyc
 TODO.md
 test.py
+.mypy_cache
