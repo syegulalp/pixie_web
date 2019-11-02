@@ -34,9 +34,14 @@ class ProcessType(Enum):
     """
 
     main = 0
-    main_async = 1
-    stream = 2
-    process_pool = 3
+    pool = 1
+
+
+class RouteType(Enum):
+    sync = 0
+    asnc = 1
+    pool = 2
+    stream = 3
 
 
 def _e(msg: str):
@@ -58,6 +63,21 @@ http_codes = {
 }
 
 
+class PoolEnv:
+    """
+    Describes the process type for the running process. If you import pool_env you can inspect proc_type and pool to see what type of process your function is running in, and whether or not your have access to the process pool. (You only have access to the process pool from the main thread.)
+    """
+
+    def __init__(
+        self, proc_type: Enum = ProcessType.main, pool: ProcessPoolExecutor = None
+    ):
+        self.proc_type = proc_type
+        self.pool = pool
+
+
+pool_env = PoolEnv()
+
+
 class Env:
     """
     Environment object created from a HTTP request.
@@ -66,13 +86,12 @@ class Env:
     def __init__(
         self,
         headers: Optional[bytes] = None,
-        proc_type: Enum = ProcessType.main,
+        # proc_type: Enum = ProcessType.main,
     ):
         self.raw_headers = headers
         self._headers = self._form = self._body = None
-        self.proc_type = proc_type
+        # self.proc_type = proc_type
 
-    
     @property
     def headers(self):
         """
@@ -214,7 +233,7 @@ def response(
         body = b""
     else:
         if type(body) is str:
-            body = body.encode("utf-8") # type: ignore
+            body = body.encode("utf-8")  # type: ignore
         length = len(body)
         if not headers:
             headers = {}
@@ -226,12 +245,12 @@ def response(
         header_str = ""
 
     return (
-        bytes( # type: ignore
+        bytes(  # type: ignore
             f"HTTP/1.1 {code} {http_codes[code]}\nContent-Type: {content_type}{header_str}\n\n",
             "utf-8",
         )
         + body
-    ) 
+    )
 
 
 def header(
@@ -267,7 +286,7 @@ path_re_str = "<([^>]*)>"
 path_re = re.compile(path_re_str)
 
 
-def route(path: str, proc_type: ProcessType = ProcessType.process_pool):
+def route(path: str, route_type: RouteType = RouteType.pool):
     """
     Route decorator, used to assign a route to a function handler by wrapping the function. Accepts a `path` and an optional `proc_type` as arguments.
     """
@@ -284,40 +303,38 @@ def route(path: str, proc_type: ProcessType = ProcessType.process_pool):
 
     def decorator(callback):
         if route_regex:
-            add_dynamic_route(route_regex, callback, proc_type, parameters)
+            add_dynamic_route(route_regex, callback, route_type, parameters)
         else:
-            add_route(path, callback, proc_type)
+            add_route(path, callback, route_type)
         return callback
 
     return decorator
 
 
-def add_route(
-    path: str, callback: Callable, proc_type: ProcessType = ProcessType.process_pool
-):
+def add_route(path: str, callback: Callable, route_type: RouteType = RouteType.pool):
     """
     Assign a static route to a function handler.
     """
-    static_routes[path] = (callback, proc_type)
+    static_routes[path] = (callback, route_type)
 
 
 def add_dynamic_route(
     path: str,
     callback: Callable,
-    proc_type: ProcessType = ProcessType.process_pool,
+    route_type: RouteType = RouteType.pool,
     parameters: list = None,
 ):
     """
     Assign a dynamic route (with wildcards) to a function handler.
     """
-    dynamic_routes.append((path, callback, proc_type, parameters))
+    dynamic_routes.append((path, callback, route_type, parameters))
 
 
 def run_route_pool(raw_env: bytes, func: Callable, *a, **ka):
     """
     Execute a function synchronously in the local environment. A copy of the HTTP request data is passed automatically to the handler as its first argument.
     """
-    local_env = Env(raw_env, proc_type=env.proc_type)
+    local_env = Env(raw_env)
     return func(local_env, *a, **ka)
 
 
@@ -327,7 +344,7 @@ def run_route_pool_stream(
     """
     Execute a function synchronously in the process pool, and return results from it incrementally.
     """
-    local_env = Env(raw_env, proc_type=env.proc_type)
+    local_env = Env(raw_env)
     for _ in func(local_env, *a, **ka):
         if signal.is_set():
             raise Exception
@@ -382,12 +399,12 @@ async def connection_handler(
         path = action[1].split("?", 1)[0]
 
         try:
-            handler, pool_type = static_routes[path]
+            handler, route_type = static_routes[path]
         except KeyError:
             for route in dynamic_routes:
                 route_match = route[0].fullmatch(path)
                 if route_match:
-                    handler, pool_type = route[1:3]
+                    handler, route_type = route[1:3]
                     parameters = route_match.groups()
             if (not dynamic_routes) or (not route_match):
                 write(error_404(path))
@@ -401,19 +418,19 @@ async def connection_handler(
             # Run with no pooling or async, in default process
             # Single-threaded, potentially blocking
 
-            if pool_type is ProcessType.main:
-                result = handler(Env(raw_data, proc_type=pool_type), *parameters)
+            if route_type is RouteType.sync:
+                result = handler(Env(raw_data), *parameters)
 
             # Run as async, in default process
             # Single-threaded, nonblocking
 
-            elif pool_type is ProcessType.main_async:
-                result = await handler(Env(raw_data, proc_type=pool_type), *parameters)
+            elif route_type is RouteType.asnc:
+                result = await handler(Env(raw_data), *parameters)
 
             # Run non-async code in process pool
             # Multi-processing, not blocking
 
-            elif pool_type is ProcessType.process_pool:
+            elif route_type is RouteType.pool:
                 result = await wait_for(
                     run_in_executor(
                         pool, run_route_pool, raw_data, handler, *parameters
@@ -423,7 +440,7 @@ async def connection_handler(
 
             # Run incremental stream, potentially blocking, in process pool
 
-            elif pool_type is ProcessType.stream:
+            elif route_type is RouteType.stream:
 
                 job_queue = mgr.Queue()
                 signal = mgr.Event()
@@ -498,9 +515,7 @@ def pool_start():
     """
     Launched at the start of each pooled process. This modifies the environment data in the process to let any routes running in the process know that it's in a pool, not in the main process.
     """
-    env.proc_type = ProcessType.process_pool
-    # global job_queue
-    # job_queue = queue_to_use
+    pool_env.proc_type = ProcessType.pool
 
 
 def dummy():
@@ -530,7 +545,9 @@ def use_process_pool(workers: Optional[int] = None):
         )
         pool = None
     else:
-        _e(f"Using {pool._max_workers} processes") # type: ignore
+        _e(f"Using {pool._max_workers} processes")  # type: ignore
+
+    pool_env.pool = pool
 
 
 srv = None
@@ -552,7 +569,7 @@ async def start_server(host: str, port: int):
     """
     global srv
     srv = await asyncio.start_server(connection_handler, host, port)
-    async with srv: # type: ignore
+    async with srv:  # type: ignore
         _e(f"Listening on {host}:{port}")
         await srv.serve_forever()
 
