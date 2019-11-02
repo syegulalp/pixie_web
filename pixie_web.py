@@ -86,11 +86,9 @@ class Env:
     def __init__(
         self,
         headers: Optional[bytes] = None,
-        # proc_type: Enum = ProcessType.main,
     ):
         self.raw_headers = headers
         self._headers = self._form = self._body = None
-        # self.proc_type = proc_type
 
     @property
     def headers(self):
@@ -526,9 +524,6 @@ def use_process_pool(workers: Optional[int] = None):
     """
     Set up the process pool and ensure it's running correctly.
     """
-    # global job_queue
-    # job_queue = Queue()
-
     global mgr
     mgr = Manager()
 
