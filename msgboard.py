@@ -2,14 +2,14 @@
 
 import shelve
 
-from pixie_web import route, run, template, response, ProcessType
+from pixie_web import route, run, template, response, RouteType
 
 main_template = template("post.html", "demo")
 
 # because `shelve` is not threadsafe, we must run this demo single-threaded
 
 
-@route("/", ProcessType.main)
+@route("/", RouteType.sync)
 def main(env):
 
     msg = ""
