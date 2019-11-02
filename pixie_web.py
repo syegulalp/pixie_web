@@ -384,11 +384,11 @@ async def connection_handler(
                 return
 
             if raw_data is None:
-                raw_data = _
+                raw_data = bytearray(_)
                 action = _.decode("utf-8").split(" ")
                 continue
             else:
-                raw_data += _
+                raw_data.extend(_)
 
             if _ in (b"\r\n", b"\n"):
                 break
@@ -396,7 +396,7 @@ async def connection_handler(
             if b"Content-Length:" in _:
                 content_length = int(_.decode("utf-8").split(":")[1])
 
-        raw_data += await reader.read(content_length)
+        raw_data.extend(await reader.read(content_length))
 
         path = action[1].split("?", 1)[0]
 
