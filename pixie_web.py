@@ -27,6 +27,8 @@ from asyncio.exceptions import CancelledError
 pool = None
 mgr = None
 
+class ParentProcessConnectionAborted(ConnectionAbortedError):
+    pass
 
 class ProcessType(Enum):
     """
@@ -69,7 +71,9 @@ class PoolEnv:
     """
 
     def __init__(
-        self, proc_type: Enum = ProcessType.main, pool: Optional[ProcessPoolExecutor] = None
+        self,
+        proc_type: Enum = ProcessType.main,
+        pool: Optional[ProcessPoolExecutor] = None,
     ):
         self.proc_type = proc_type
         self.pool = pool
@@ -83,10 +87,7 @@ class Env:
     Environment object created from a HTTP request.
     """
 
-    def __init__(
-        self,
-        headers: bytes
-    ):
+    def __init__(self, headers: bytes):
         self.raw_data = headers
         self._headers = self._form = self._body = None
 
@@ -144,9 +145,8 @@ class Env:
         """
         Returns the verb in the headers.
         """
-        return self.headers['_VERB']
+        return self.headers["_VERB"]
 
-    
     @property
     def form(self):
         """
@@ -172,7 +172,6 @@ class Env:
             self._form[__[0]] = unquote_plus(__[1])
 
         return self._form
-
 
 
 @lru_cache(TEMPLATE_CACHE_SIZE)
@@ -290,7 +289,7 @@ path_re = re.compile(path_re_str)
 
 def route(path: str, route_type: RouteType = RouteType.pool):
     """
-    Route decorator, used to assign a route to a function handler by wrapping the function. Accepts a `path` and an optional `proc_type` as arguments.
+    Route decorator, used to assign a route to a function handler by wrapping the function. Accepts a `path` and an optional `route_type` as arguments.
     """
     parameters = []
     route_regex = None
@@ -340,6 +339,7 @@ def run_route_pool(raw_env: bytes, func: Callable, *a, **ka):
     return func(local_env, *a, **ka)
 
 
+
 def run_route_pool_stream(
     remote_queue: Queue, signal, raw_env: bytes, func: Callable, *a, **ka
 ):
@@ -349,7 +349,7 @@ def run_route_pool_stream(
     local_env = Env(raw_env)
     for _ in func(local_env, *a, **ka):
         if signal.is_set():
-            raise Exception
+            raise ParentProcessConnectionAborted
         remote_queue.put(_)
     remote_queue.put(b"")
 
