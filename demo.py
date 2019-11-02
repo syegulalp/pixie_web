@@ -26,8 +26,8 @@ def body(env, text):
         id(env),
         id(g_env),
         env.proc_type,
-        "".join([f"<li><b>{k}</b>: {v}</li>" for k, v in env.as_dict().items()]),
-        env.form(),
+        "".join([f"<li><b>{k}</b>: {v}</li>" for k, v in env.headers.items()]),
+        env.form,
     )
 
 

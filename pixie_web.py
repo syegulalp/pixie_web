@@ -69,7 +69,7 @@ class Env:
         proc_type: Enum = ProcessType.main,
     ):
         self.raw_headers = headers
-        self._headers = self._form = None
+        self._headers = self._form = self._body = None
         self.proc_type = proc_type
 
     
@@ -104,9 +104,23 @@ class Env:
             except IndexError:
                 pass
 
-        self.body = data[1]
+        self._body = data[1]
 
         return self._headers
+
+    @property
+    def body(self):
+        """
+        Provide body as bytes.
+        Use cached copy if available.
+        """
+
+        if self._body:
+            return self._body
+
+        self.headers
+
+        return self._body
 
     @property
     def form(self):
@@ -123,10 +137,10 @@ class Env:
         if self._headers.get("Content-Type") != "application/x-www-form-urlencoded":
             return None
 
-        if "\r" in self.body:
-            form = self.body.split("\r\n")
+        if "\r" in self._body:
+            form = self._body.split("\r\n")
         else:
-            form = self.body.split("\n")
+            form = self._body.split("\n")
 
         self._form = {}
 
