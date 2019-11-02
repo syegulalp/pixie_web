@@ -389,7 +389,7 @@ async def connection_handler(
                 if route_match:
                     handler, pool_type = route[1:3]
                     parameters = route_match.groups()
-            if not route_match:
+            if (not dynamic_routes) or (not route_match):
                 write(error_404(path))
                 await drain()
                 continue
