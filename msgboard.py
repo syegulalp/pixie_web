@@ -40,4 +40,4 @@ def main(env):
 
 
 if __name__ == "__main__":
-    run(port=80)
+    run(port=80, workers=None)
