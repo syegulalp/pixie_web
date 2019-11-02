@@ -4,3 +4,4 @@ venv
 TODO.md
 test.py
 .mypy_cache
+db.*
