@@ -1,4 +1,4 @@
-from typing import Optional, Union, Callable, Type, cast
+from typing import Optional, Union, Callable, Type
 
 DEFAULT_TIMEOUT = 15.0
 FILE_CACHE_SIZE = 256
