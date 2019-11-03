@@ -95,7 +95,7 @@ async def async_pool(env):
 @route("/thread", RouteType.sync_thread)
 def async_thread_pool(env):
     sleep(3)
-    return response(body(env, "Sync in async thread"))
+    return response(body(env, "Sync in async thread (slept for 3 seconds)"))
 
 
 # Run a local, single-threaded, sync process (same as /)
