@@ -57,18 +57,18 @@ On the whole I'd rather support a few generally useful features well than a lot 
 Run this and open your browser to `localhost:8000`.
 
 ```python
-from pixie_web import route, run, response, RouteType, proc_env
+from pixie_web import route, run, Response, RouteType, proc_env
 
 # Local synchronous
 @route("/", RouteType.sync)
 def index(env):
-    return response(f"Hello world from process type {proc_env.proc_type}")
+    return Response(f"Hello world from process type {proc_env.proc_type}")
 
 
 # Local async
 @route("/async", RouteType.asnc)
 async def index_async(env):
-    return response(f"Hello world (async) from process type {proc_env.proc_type}")
+    return Response(f"Hello world (async) from process type {proc_env.proc_type}")
 
 
 # Process-pooled (the default)
@@ -77,7 +77,7 @@ def cpu_bound(env):
     from time import sleep
 
     sleep(3)
-    return response(f"Hello world (CPU-bound) from process type {proc_env.proc_type}")
+    return Response(f"Hello world (CPU-bound) from process type {proc_env.proc_type}")
 
 
 if __name__ == "__main__":

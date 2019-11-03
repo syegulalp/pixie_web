@@ -337,26 +337,6 @@ def error_503(path: str) -> bytes:
     )
 
 
-def before(before_func):
-    def decorator(func):
-        def wrapped(env, *a, **ka):
-            return func(before_func(env), *a, **ka)
-
-        return wrapped
-
-    return decorator
-
-
-def after(after_func):
-    def decorator(func):
-        def wrapped(env, *a, **ka):
-            return after_func(*func(env, *a, **ka))
-
-        return wrapped
-
-    return decorator
-
-
 path_re_str = "<([^>]*)>"
 path_re = re.compile(path_re_str)
 
@@ -365,6 +345,8 @@ def route(
     path: str,
     route_type: RouteType = RouteType.pool,
     action: Union[Iterable, str] = "GET",
+    before=None,
+    after=None,
 ):
     """
     Route decorator, used to assign a route to a function handler by wrapping the function. Accepts a `path`, an optional `route_type`, and an optional list of HTTP verbs (or a single verb string, default "GET") as arguments.
@@ -384,6 +366,7 @@ def route(
         action = [action]
 
     def decorator(callback):
+
         if route_regex:
             for _ in action:
                 add_dynamic_route(route_regex, _, callback, route_type, parameters)

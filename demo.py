@@ -1,7 +1,7 @@
 from pixie_web import (
     route,
     run,
-    response,
+    Response,
     header,
     proc_env,
     static_file,
@@ -38,7 +38,7 @@ def body(env, text):
 
 @route("/")
 def index(env):
-    return response(body(env, "Pixie is running!"))
+    return Response(body(env, "Pixie is running!"))
 
 
 # Serve a single static file from the /demo directory
@@ -86,7 +86,7 @@ def crash_local(env):
 
 @route("/async", RouteType.asnc)
 async def async_pool(env):
-    return response(body(env, "Async"))
+    return Response(body(env, "Async"))
 
 
 # Run a blocking sync function in an async thread (cooperative multitasking)
@@ -95,7 +95,7 @@ async def async_pool(env):
 @route("/thread", RouteType.sync_thread)
 def async_thread_pool(env):
     sleep(3)
-    return response(body(env, "Sync in async thread (slept for 3 seconds)"))
+    return Response(body(env, "Sync in async thread (slept for 3 seconds)"))
 
 
 # Run a local, single-threaded, sync process (same as /)
@@ -103,7 +103,7 @@ def async_thread_pool(env):
 
 @route("/local", RouteType.sync)
 def local_proc(env):
-    return response(body(env, "Native process"))
+    return Response(body(env, "Native process"))
 
 
 # Run a process in the process pool
@@ -111,7 +111,7 @@ def local_proc(env):
 
 @route("/proc", RouteType.pool)
 def proc_pool(env):
-    return response(body(env, "Process pool (explicitly labeled)"))
+    return Response(body(env, "Process pool (explicitly labeled)"))
 
 
 # Run a route that times out but doesn't block (since it's running in the process pool).
@@ -120,7 +120,7 @@ def proc_pool(env):
 @route("/sleep-timeout")
 def sleep_timeout(env):
     sleep(30)
-    return response(body(env, "Slept for 30 seconds"))
+    return Response(body(env, "Slept for 30 seconds"))
 
 
 # Run a route that is CPU-intensive in the process pool
@@ -129,13 +129,13 @@ def sleep_timeout(env):
 @route("/sleep")
 def sleep_short(env):
     sleep(3)
-    return response(body(env, "Slept for 3 seconds"))
+    return Response(body(env, "Slept for 3 seconds"))
 
 
 @route("/sleep-async", RouteType.asnc)
 async def sleep_async(env):
     await asyncio_sleep(3)
-    return response(body(env, "Slept for 3 seconds (async)"))
+    return Response(body(env, "Slept for 3 seconds (async)"))
 
 
 # Yield blocking results incrementally (runs in subprocess)
@@ -160,7 +160,7 @@ def stream(env):
 def end_server(env):
     from pixie_web import close_server
 
-    yield response("Server closed")
+    yield Response("Server closed")
     close_server()
 
 

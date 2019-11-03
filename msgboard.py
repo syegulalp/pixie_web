@@ -2,13 +2,13 @@
 # because `shelve` is not threadsafe, we must run this demo single-threaded
 
 import shelve
-from pixie_web import route, run, template, response, RouteType
+from pixie_web import route, run, template, Response, RouteType
 
 main_template = template("post.html", "demo")
 
 
 def output(data, msg):
-    return response(
+    return Response(
         main_template.format(
             "<ul>" + "".join([f"<li>{_}</li>" for _ in data]) + "</ul>", msg
         )
