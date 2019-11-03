@@ -91,7 +91,7 @@ proc_env = ProcEnv()
 
 class Request:
     """
-    Oject created from a HTTP request.
+    Object created from a HTTP request.
     """
 
     def __init__(self, headers: bytes):
@@ -553,9 +553,11 @@ def use_process_pool(workers: Optional[int] = None):
     """
     Set up the process pool and ensure it's running correctly.
     """
+    # TODO: maybe we can use proc_env instead
     global mgr
     mgr = Manager()
-
+    
+    # TODO: don't use global pool, just proc_env
     global pool
     pool = ProcessPoolExecutor(max_workers=workers, initializer=pool_start)
 

@@ -5,3 +5,4 @@ TODO.md
 test.py
 .mypy_cache
 db.*
+uvloop.py
