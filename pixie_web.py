@@ -29,7 +29,6 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Queue, Manager, Event
 from queue import Empty as EmptyQueue
 from enum import Enum
-from asyncio.exceptions import CancelledError
 
 pool = None
 mgr = None
@@ -397,7 +396,7 @@ async def connection_handler(
     at_eof = reader.at_eof
     wait_for = asyncio.wait_for
     close = writer.close
-    AsyncTimeout = asyncio.exceptions.TimeoutError
+    AsyncTimeout = asyncio.TimeoutError
     run_in_executor = get_loop().run_in_executor
 
     while True:
