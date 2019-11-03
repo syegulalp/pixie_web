@@ -10,8 +10,10 @@ import pickle
 pickle.DEFAULT_PROTOCOL = pickle.HIGHEST_PROTOCOL
 
 import asyncio
+
 try:
     import uvloop
+
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 except ImportError:
     pass
@@ -39,7 +41,7 @@ class ParentProcessConnectionAborted(ConnectionAbortedError):
 
 class ProcessType(Enum):
     """
-    Classifications for the different ways routes can be processed.
+    Classifications for the different process types.
     """
 
     main = 0
@@ -47,10 +49,15 @@ class ProcessType(Enum):
 
 
 class RouteType(Enum):
+    """
+    Classifications for the different ways routes can be processed.
+    """
+
     sync = 0
-    asnc = 1
-    pool = 2
-    stream = 3
+    sync_thread = 1
+    asnc = 2
+    pool = 3
+    stream = 4
 
 
 def _e(msg: str):
@@ -373,7 +380,7 @@ def run_route_pool_stream(
         if signal.is_set():
             raise ParentProcessConnectionAborted
         remote_queue.put(_)
-    remote_queue.put(b"")
+    remote_queue.put(None)
 
 
 async def connection_handler(
@@ -448,7 +455,14 @@ async def connection_handler(
             if route_type is RouteType.sync:
                 result = handler(Request(raw_data), *parameters)
 
-            # Run as async, in default process
+            # Run a sync function in an async thread (cooperative multitasking)
+
+            elif route_type is RouteType.sync_thread:
+                result = await run_in_executor(
+                    None, handler, Request(raw_data), *parameters
+                )
+
+            # Run async function in default process
             # Single-threaded, nonblocking
 
             elif route_type is RouteType.asnc:
@@ -497,11 +511,11 @@ async def connection_handler(
                         else:
                             break
 
+                    if _ is None:
+                        break
+
                     write(_)
                     await drain()
-
-                    if _ == b"":
-                        break
 
                 writer.close()
                 return
@@ -556,7 +570,7 @@ def use_process_pool(workers: Optional[int] = None):
     # TODO: maybe we can use proc_env instead
     global mgr
     mgr = Manager()
-    
+
     # TODO: don't use global pool, just proc_env
     global pool
     pool = ProcessPoolExecutor(max_workers=workers, initializer=pool_start)

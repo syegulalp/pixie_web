@@ -36,7 +36,7 @@ def body(env, text):
 # Runs single-threaded in the local process
 
 
-@route("/", RouteType.sync)
+@route("/")
 def index(env):
     return response(body(env, "Pixie is running!"))
 
@@ -87,6 +87,15 @@ def crash_local(env):
 @route("/async", RouteType.asnc)
 async def async_pool(env):
     return response(body(env, "Async"))
+
+
+# Run a blocking sync function in an async thread (cooperative multitasking)
+
+
+@route("/thread", RouteType.sync_thread)
+def async_thread_pool(env):
+    sleep(3)
+    return response(body(env, "Sync in async thread"))
 
 
 # Run a local, single-threaded, sync process (same as /)
