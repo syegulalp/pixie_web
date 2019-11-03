@@ -10,6 +10,7 @@ from pixie_web import (
     RouteType,
 )
 
+from asyncio import sleep as asyncio_sleep
 from time import sleep
 
 # Load template from file on disk.
@@ -120,6 +121,12 @@ def sleep_timeout(env):
 def sleep_short(env):
     sleep(3)
     return response(body(env, "Slept for 3 seconds"))
+
+
+@route("/sleep-async", RouteType.asnc)
+async def sleep_async(env):
+    await asyncio_sleep(3)
+    return response(body(env, "Slept for 3 seconds (async)"))
 
 
 # Yield blocking results incrementally (runs in subprocess)
