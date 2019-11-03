@@ -213,7 +213,7 @@ def static_file(path: str, root: str = os_getcwd(), max_age: int = 38400) -> byt
         with open(full_path, "rb") as file:
             stats = os_stat(full_path)
             last_mod = formatdate(stats.st_mtime, usegmt=True)
-            return response(
+            return simple_response(
                 file.read(),
                 content_type=file_type,
                 headers={
@@ -233,14 +233,16 @@ def cached_file(path: str, root: str = os_getcwd(), max_age: int = 38400) -> byt
     return static_file(path, root, max_age)
 
 
-def response(
+def simple_response(
     body: Union[str, bytes, None],
     code: int = 200,
     content_type: Optional[str] = "text/html",
     headers: Optional[dict] = None,
 ) -> bytes:
     """
-    Generate a response object (a byte stream) from either a string or a bytes object. Use `content_type` to set the Content-Type: header, `code` to set the HTTP response code, and pass a dict to `headers` to set other headers as needed.
+    Generate a simple response object (a byte stream) from either a string or a bytes object. Use `content_type` to set the Content-Type: header, `code` to set the HTTP response code, and pass a dict to `headers` to set other headers as needed.
+
+    Use this when you want to simply return a byte sequence as your response, without needing to manipulate the results too much.
     """
 
     if body is None:
@@ -267,33 +269,92 @@ def response(
     )
 
 
+class Response:
+    """
+    Generate a complex response object (a class instance) from a string object. Use `content_type` to set the Content-Type: header, `code` to set the HTTP response code, and pass a dict to `headers` to set other headers as needed.
+
+    Use this when you want to perform complex manipulations on a response, like mutating its properties across multiple functions, before returning it to the client.
+    """
+
+    def __init__(
+        self,
+        body: str = "",
+        code: int = 200,
+        content_type: str = "text/html",
+        headers: dict = {},
+    ):
+        self.body = body
+        self.headers = headers
+        self.code = code
+        self.content_type = content_type
+
+    def as_bytes(self) -> bytes:
+        body = self.body.encode("utf_8")  # type: ignore
+        self.headers["Content-Length"] = len(body)
+
+        if self.headers is not None:
+            header_str = "\n" + "\n".join(
+                [f"{k}: {v}" for k, v in self.headers.items()]
+            )
+        else:
+            header_str = ""
+
+        return (
+            bytes(
+                f"HTTP/1.1 {self.code} {http_codes[self.code]}\nContent-Type: {self.content_type}{header_str}\n\n",
+                "utf-8",
+            )
+            + body
+        )
+
+
 def header(
     code: int = 200, content_type: str = "text/html", headers: Optional[dict] = None
 ):
-    return response(None, code, content_type, headers)
+    return simple_response(None, code, content_type, headers)
 
 
 def error_404(path: str) -> bytes:
     """
     Built-in 404: Not Found error handler.
     """
-    return response(f"<h1>Not found: {path}</h1>", 404)
+    return simple_response(f"<h1>Not found: {path}</h1>", 404)
 
 
 def error_500(path: str, error: Exception) -> bytes:
     """
     Built-in 500: Server Error handler.
     """
-    return response(f"<h1>Server error in {path}</h1><p>{str(error)}</p>", 500)
+    return simple_response(f"<h1>Server error in {path}</h1><p>{str(error)}</p>", 500)
 
 
 def error_503(path: str) -> bytes:
     """
     Built-in 503: Server Timeout handler.
     """
-    return response(
+    return simple_response(
         f"<h1>Server timed out after {DEFAULT_TIMEOUT} seconds in {path}</h1>", 503
     )
+
+
+def before(before_func):
+    def decorator(func):
+        def wrapped(env, *a, **ka):
+            return func(before_func(env), *a, **ka)
+
+        return wrapped
+
+    return decorator
+
+
+def after(after_func):
+    def decorator(func):
+        def wrapped(env, *a, **ka):
+            return after_func(*func(env, *a, **ka))
+
+        return wrapped
+
+    return decorator
 
 
 path_re_str = "<([^>]*)>"
@@ -527,7 +588,11 @@ async def connection_handler(
 
         try:
             if result is None:
-                write(response(b""))
+                write(simple_response(b""))
+                await drain()
+
+            elif isinstance(result, Response):
+                write(result.as_bytes())
                 await drain()
 
             elif isinstance(result, bytes):
