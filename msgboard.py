@@ -2,24 +2,17 @@
 # because `shelve` is not threadsafe, we must run this demo single-threaded
 
 import shelve
-from pixie_web import route, run, template, Response, RouteType
+from pixie_web import route, run, Template, template, simple_response, RouteType, Unsafe
 
-main_template = template("post.html", "demo")
+main_template = Template(None, "post.html", "demo")
 
-
-def output(data, msg):
-    return Response(
-        main_template.format(
-            "<ul>" + "".join([f"<li>{_}</li>" for _ in data]) + "</ul>", msg
-        )
-    )
+def output(data, notice):
+    msgs = Unsafe("".join(["<li>{}</li>".format(Unsafe(_).esc) for _ in data]))
+    return simple_response(main_template.render(msgs, notice))
 
 
 def s_open(flag):
     return shelve.open("db", flag=flag, protocol=5)
-
-
-# GET is the default route action
 
 
 @route("/", RouteType.sync)
@@ -36,7 +29,7 @@ def main_post(env):
         data = db["posts"]
         value = env.form["text"]
         if value == "":
-            msg = "<p>You submitted a blank post. Be more creative.</p>"
+            msg = "You submitted a blank post. Be more creative."
         else:
             data.append(value)
             if len(data) > 5:

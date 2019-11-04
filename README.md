@@ -2,6 +2,8 @@
 
 `pixie_web` (or just `pixie` for short) is a proof-of-concept mini-web framework for Python, a la [`bottle`](http://bottlepy.org/), that relies intentionally on the latest version of Python (3.8+) and its `async` idioms.
 
+> This project is currently very unstable and under heavy development.
+
 I wrote it mostly to teach myself `async` and modern Python, but if it seems like it could be genuinely useful, please feel free to submit pull requests.
 
 `pixie_web`'s distinct feature is that it can satisfy requests on different routes using different processing mechanisms:
@@ -74,18 +76,19 @@ async def index_async(env):
 # Process-pooled (the default)
 @route("/cpu", RouteType.pool)
 def cpu_bound(env):
-    from time import sleep
+    # from time import sleep
 
-    sleep(3)
+    # sleep(3)
     return Response(f"Hello world (CPU-bound) from process type {proc_env.proc_type}")
 
 
 if __name__ == "__main__":
     run()
-
 ```
 
 See `demo.py` for a more elaborate example and usage. (It's not very pretty but I'll work on that.)
+
+Also see `msgboard.py` for a primitive message board application using `shelve`, which provides some idea of how form processing works. (Note that there is currently no HTML escaping in form input or variable output.)
 
 # License
 
