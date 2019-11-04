@@ -242,7 +242,7 @@ def simple_response(
     """
     Generate a simple response object (a byte stream) from either a string or a bytes object. Use `content_type` to set the Content-Type: header, `code` to set the HTTP response code, and pass a dict to `headers` to set other headers as needed.
 
-    Use this when you want to simply return a byte sequence as your response, without needing to manipulate the results too much.
+    Use this when you want to simply return a byte sequence as your response, without needing to manipulate the results too much. You can also use this to `yield` headers, and then pieces of a body (as simple `bytes` objects), when you want to return results incrementally.
     """
 
     if body is None:
@@ -289,23 +289,7 @@ class Response:
         self.content_type = content_type
 
     def as_bytes(self) -> bytes:
-        body = self.body.encode("utf_8")  # type: ignore
-        self.headers["Content-Length"] = len(body)
-
-        if self.headers is not None:
-            header_str = "\n" + "\n".join(
-                [f"{k}: {v}" for k, v in self.headers.items()]
-            )
-        else:
-            header_str = ""
-
-        return (
-            bytes(
-                f"HTTP/1.1 {self.code} {http_codes[self.code]}\nContent-Type: {self.content_type}{header_str}\n\n",
-                "utf-8",
-            )
-            + body
-        )
+        return simple_response(self.body, self.code, self.content_type, self.headers)
 
 
 def header(
@@ -445,8 +429,7 @@ async def connection_handler(
 
     while True:
 
-        action = raw_data = signal = None
-        content_length = 0
+        action = raw_data = signal = content_length = None
 
         while True:
             _ = await readline()
@@ -465,10 +448,11 @@ async def connection_handler(
             if _ in (b"\r\n", b"\n"):
                 break
 
-            if b"Content-Length:" in _:
+            if _.startswith(b"Content-Length:"):
                 content_length = int(_.decode("utf-8").split(":")[1])
 
-        raw_data.extend(await reader.read(content_length))
+        if content_length:
+            raw_data.extend(await reader.read(content_length))
 
         path = action[1].split("?", 1)[0]
         verb = action[0]
@@ -565,29 +549,24 @@ async def connection_handler(
 
         except AsyncTimeout:
             result = error_503(path)
-
         except Exception as err:
             result = error_500(path, err)
 
         try:
             if result is None:
                 write(simple_response(b""))
-                await drain()
-
             elif isinstance(result, Response):
                 write(result.as_bytes())
-                await drain()
-
             elif isinstance(result, bytes):
-                write(result)
-                await drain()
-
+                write(simple_response(result))
             else:
                 for _ in result:
                     write(_)
                     await drain()
                 writer.close()
                 return
+
+            await drain()
 
         except ConnectionAbortedError:
             if signal:
