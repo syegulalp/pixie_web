@@ -36,7 +36,7 @@ def body(env, text):
 # Runs single-threaded in the local process
 
 
-@route("/")
+@route("/", action=("GET","POST"))
 def index(env):
     return Response(body(env, "Pixie is running!"))
 
@@ -44,7 +44,7 @@ def index(env):
 # Serve a single static file from the /demo directory
 
 
-@route("/static_file", RouteType.sync)
+@route("/static_file", RouteType.sync, action=("GET","POST"))
 def _static_file(env):
     return static_file("index.html", "demo")
 
@@ -52,7 +52,7 @@ def _static_file(env):
 # Serve a memory-cached static file from the /demo directory
 
 
-@route("/cached_file", RouteType.sync)
+@route("/cached_file", RouteType.sync, action=("GET","POST"))
 def cached_static_file(env):
     return cached_file("index.html", "demo")
 
@@ -60,7 +60,7 @@ def cached_static_file(env):
 # Serve a memory-cached file by name using a wildcard route
 
 
-@route("/file/<filename>", RouteType.sync)
+@route("/file/<filename>", RouteType.sync, action=("GET","POST"))
 def cached_routed_file(env, filename):
     return cached_file(filename, "demo")
 
@@ -68,7 +68,7 @@ def cached_routed_file(env, filename):
 # Generate an error (in a subprocess)
 
 
-@route("/error")
+@route("/error", action=("GET","POST"))
 def crash(env):
     raise Exception(body(env, "An exception occurred in a pool process!"))
 
@@ -76,7 +76,7 @@ def crash(env):
 # Generate an error (in the main process)
 
 
-@route("/error-local", RouteType.sync)
+@route("/error-local", RouteType.sync, action=("GET","POST"))
 def crash_local(env):
     raise Exception(body(env, "An exception occurred in the main process!"))
 
@@ -84,7 +84,7 @@ def crash_local(env):
 # Run a route using async
 
 
-@route("/async", RouteType.asnc)
+@route("/async", RouteType.asnc, action=("GET","POST"))
 async def async_pool(env):
     return Response(body(env, "Async"))
 
@@ -92,7 +92,7 @@ async def async_pool(env):
 # Run a blocking sync function in an async thread (cooperative multitasking)
 
 
-@route("/thread", RouteType.sync_thread)
+@route("/thread", RouteType.sync_thread, action=("GET","POST"))
 def async_thread_pool(env):
     sleep(3)
     return Response(body(env, "Sync in async thread (slept for 3 seconds)"))
@@ -101,7 +101,7 @@ def async_thread_pool(env):
 # Run a local, single-threaded, sync process (same as /)
 
 
-@route("/local", RouteType.sync)
+@route("/local", RouteType.sync, action=("GET","POST"))
 def local_proc(env):
     return Response(body(env, "Native process"))
 
@@ -109,7 +109,7 @@ def local_proc(env):
 # Run a process in the process pool
 
 
-@route("/proc", RouteType.pool)
+@route("/proc", RouteType.pool, action=("GET","POST"))
 def proc_pool(env):
     return Response(body(env, "Process pool (explicitly labeled)"))
 
@@ -117,7 +117,7 @@ def proc_pool(env):
 # Run a route that times out but doesn't block (since it's running in the process pool).
 
 
-@route("/sleep-timeout")
+@route("/sleep-timeout", action=("GET","POST"))
 def sleep_timeout(env):
     sleep(30)
     return Response(body(env, "Slept for 30 seconds"))
@@ -126,13 +126,13 @@ def sleep_timeout(env):
 # Run a route that is CPU-intensive in the process pool
 
 
-@route("/sleep")
+@route("/sleep", action=("GET","POST"))
 def sleep_short(env):
     sleep(3)
     return Response(body(env, "Slept for 3 seconds"))
 
 
-@route("/sleep-async", RouteType.asnc)
+@route("/sleep-async", RouteType.asnc,action=("GET","POST"))
 async def sleep_async(env):
     await asyncio_sleep(3)
     return Response(body(env, "Slept for 3 seconds (async)"))
@@ -142,7 +142,7 @@ async def sleep_async(env):
 # Not recommended but we can do it.
 
 
-@route("/stream", RouteType.stream)
+@route("/stream", RouteType.stream,action=("GET","POST"))
 def stream(env):
     # Send header-only first
     yield header()
