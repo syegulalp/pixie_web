@@ -76,9 +76,9 @@ async def index_async(env):
 # Process-pooled (the default)
 @route("/cpu", RouteType.pool)
 def cpu_bound(env):
-    # from time import sleep
+    from time import sleep
 
-    # sleep(3)
+    sleep(3)
     return Response(f"Hello world (CPU-bound) from process type {proc_env.proc_type}")
 
 
