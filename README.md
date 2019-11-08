@@ -22,7 +22,6 @@ This way, you can quickly direct CPU-reliant traffic to a process pool, I/O-reli
 * Sync/async/process-pooled routing.
 * Route decorators in the style of `bottle` or `flask`.
 * Wildcard routes (e.g., `/route/<filename>`, with `filename` passed to the handler function as an argument).
-* Load files from disk for use as simple templates.
 * In-memory file and template caching, using Python's `functools.lru_cache` (you can require or suppress caching as needed).
 * Verb handlers for routes (`GET/POST`).
 * Form submissions.

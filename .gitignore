@@ -9,3 +9,4 @@ uvloop.py
 *.bak
 *.bat
 doc*.md
+old/

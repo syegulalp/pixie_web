@@ -25,6 +25,7 @@ from os.path import join as path_join
 from functools import lru_cache
 from email.utils import formatdate
 from urllib.parse import unquote_plus
+from http import cookies as http_cookies
 from mimetypes import guess_type
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Queue, Manager, Event
@@ -51,6 +52,11 @@ class ProcessType(Enum):
 class RouteType(Enum):
     """
     Classifications for the different ways routes can be processed.
+    `sync`: Synchronous route.
+    `sync_thread`: Sync route using thread pool.
+    `asnc`: Async route.
+    `pool`: Multiprocessing-pooled route.
+    `stream`: Multiprocessing-pooled route that yields results incrementally (and therefore may block quite a bit).
     """
 
     sync = 0
@@ -217,15 +223,27 @@ class Response:
         body: str = "",
         code: int = 200,
         content_type: str = "text/html",
-        headers: dict = {},
+        headers: Optional[dict] = None,
+        cookies: Optional[dict] = None,
     ):
         self.body = body
         self.headers = headers
         self.code = code
         self.content_type = content_type
 
+        if cookies is not None:
+            self.cookies: Optional[
+                http_cookies.SimpleCookie
+            ] = http_cookies.SimpleCookie()
+            for k, v in cookies.items():
+                self.cookies[k] = v
+        else:
+            self.cookies = None
+
     def as_bytes(self) -> bytes:
-        return simple_response(self.body, self.code, self.content_type, self.headers)
+        return simple_response(
+            self.body, self.code, self.content_type, self.headers, self.cookies
+        )
 
 
 class Unsafe:
@@ -306,6 +324,7 @@ def simple_response(
     code: int = 200,
     content_type: Optional[str] = "text/html",
     headers: Optional[dict] = None,
+    cookies: Optional[http_cookies.SimpleCookie] = None,
 ) -> bytes:
     """
     Generate a simple response object (a byte stream) from either a string or a bytes object. Use `content_type` to set the Content-Type: header, `code` to set the HTTP response code, and pass a dict to `headers` to set other headers as needed.
@@ -328,9 +347,14 @@ def simple_response(
     else:
         header_str = ""
 
+    if cookies is not None:
+        cookie_str = "\r\n" + cookies.output()
+    else:
+        cookie_str = ""
+
     return (
         bytes(  # type: ignore
-            f"HTTP/1.1 {code} {http_codes[code]}\r\nContent-Type: {content_type}{header_str}\r\n\r\n",
+            f"HTTP/1.1 {code} {http_codes[code]}\r\nContent-Type: {content_type}{header_str}{cookie_str}\r\n\r\n",
             "utf-8",
         )
         + body
@@ -620,8 +644,8 @@ class Server:
 
             try:
 
-                # Run with no pooling or async, in default process
-                # Single-threaded, potentially blocking
+                # Run with no pooling or async, in default process.
+                # Single-threaded, potentially blocking.
 
                 if route_type is RouteType.sync:
                     result = handler(Request(raw_data), *parameters)
@@ -633,14 +657,16 @@ class Server:
                         None, handler, Request(raw_data), *parameters
                     )
 
-                # Run async function in default process
-                # Single-threaded, nonblocking
+                # Run async function in default process.
+                # Single-threaded, nonblocking.
 
                 elif route_type is RouteType.asnc:
                     result = await handler(Request(raw_data), *parameters)
 
-                # Run non-async code in process pool
-                # Multi-processing, not blocking
+                # Run non-async code in process pool.
+                # Multi-processing, not blocking.
+
+                # Note that we pass `Server.run_route_pool`, not `self.run_route_pool`, because otherwise we can't correctly pickle the object. So we just use the class method that exists in the pool instance, since it doesn't need `self` anyway. If we DID need `self` over there, we could always get the server instance from the module-local server obj.
 
                 elif route_type is RouteType.pool:
                     result = await wait_for(
