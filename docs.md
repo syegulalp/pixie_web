@@ -130,7 +130,7 @@ yield b'Hello world'
 
 ```python
 body = b'Hello world'
-yield header(code=200, headers-{'Content-Length':len(body)})
+yield header(code=200, headers={'Content-Length':len(body)})
 yield body
 ```
 
