@@ -26,7 +26,7 @@ from pixie_web import route, run
 
 @route("/", RouteType.asnc) # sic `asnc`
 async def index(request):
-    return Response(f"Hello world")
+    return Response("Hello world")
 
 if __name__ == '__main__':
     run()
@@ -88,7 +88,7 @@ Async routes use an async function and must be explicitly decorated to use them.
 ```python
 @route("/async", RouteType.asnc)
 async def index_async(env):
-    return Response(f"Hello world (async)")
+    return Response("Hello world (async)")
 ```
 
 Note that as with any `async` routine, you should take care to not write blocking code. For that, use a process pool route.
@@ -102,7 +102,7 @@ Process pool routes farm out requests to a pool of Python subprocesses, so they 
 def cpu_bound(env):
     from time import sleep
     sleep(3)
-    return Response(f"Hello world (CPU-bound)")
+    return Response("Hello world (CPU-bound)")
 ```
 
 (Normally, if you wanted to sleep for 3 seconds without blocking anything, you'd use `async.sleep()`; we're just using the conventional `sleep()` function here to illustrate how this is a CPU-bound function.)
@@ -167,6 +167,6 @@ You can set cookies in a `Response()` object by simply passing a dictionary with
 @route("/async", RouteType.asnc)
 async def index_async(env):
     return Response(
-        f"Hello world", cookies={"mycookie": 1},
+        "Hello world", cookies={"mycookie": 1},
     )
 ```    
