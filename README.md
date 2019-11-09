@@ -88,6 +88,8 @@ if __name__ == "__main__":
 
 See `demo.py` for a more elaborate example and usage. (It's not very pretty but I'll work on that.)
 
+[Full documentation here](docs.md).
+
 Also see `msgboard.py` for a primitive message board application using `shelve`, which provides some idea of how form processing works. (Note that there is currently no HTML escaping in form input or variable output.)
 
 # License

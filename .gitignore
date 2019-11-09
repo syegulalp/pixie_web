@@ -8,5 +8,6 @@ db.*
 uvloop.py
 *.bak
 *.bat
-doc*.md
+old_*.md
 old/
+*.cgi
