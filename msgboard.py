@@ -6,6 +6,7 @@ from pixie_web import route, run, Template, template, simple_response, RouteType
 
 main_template = Template(None, "post.html", "demo")
 
+
 def output(data, notice):
     msgs = Unsafe("".join(["<li>{}</li>".format(Unsafe(_).esc) for _ in data]))
     return simple_response(main_template.render(msgs, notice))
@@ -24,11 +25,12 @@ def main(env):
 
 @route("/", RouteType.sync, "POST")
 def main_post(env):
+    print(env.headers)
     msg = ""
     with s_open("w") as db:
         data = db["posts"]
-        value = env.form["text"]
-        if value == "":
+        value = env.form.get("text")
+        if not value or value == "":
             msg = "You submitted a blank post. Be more creative."
         else:
             data.append(value)

@@ -35,6 +35,8 @@ from enum import Enum
 pool = None
 mgr = None
 
+import os
+
 
 class ParentProcessConnectionAborted(ConnectionAbortedError):
     pass
@@ -128,9 +130,12 @@ class Request:
         self.request = request.pop(0).strip().split(" ")
 
         for _ in request:
-            _ = _.split(":", 1)
+            k, v = _.split(":", 1)
             try:
-                self._headers[_[0]] = _[1].strip()
+                k = k.upper().replace("-", "_")
+                if k not in ("CONTENT_TYPE", "CONTENT_LENGTH"):
+                    k = f"HTTP_{k}"
+                self._headers[k] = v.strip()
             except IndexError:
                 pass
 
@@ -194,7 +199,7 @@ class Request:
         if self._form:
             return self._form
 
-        if self.headers.get("Content-Type") != "application/x-www-form-urlencoded":
+        if self.headers.get("CONTENT_TYPE") != "application/x-www-form-urlencoded":
             return None
 
         if "\r" in self._body:
@@ -577,6 +582,15 @@ class Server:
             )
         self.srv.close()
         self.srv = None
+
+    def application(self, environ, start_response):
+        pass
+
+        # REQUEST_URI
+        # QUERY_STRING
+        # REQUEST_METHOD
+        # SERVER_PROTOCOL
+        # HTTP_COOKIE
 
     async def connection_handler(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
