@@ -278,7 +278,7 @@ class Unsafe:
 
 
 class Template:
-    def __init__(self, template: str = None, filename=None, path=None):
+    def __init__(self, template: Optional[str] = None, filename=None, path=None):
         if filename:
             with open(path_join(path, filename), "r") as f:
                 template = f.read()
@@ -645,11 +645,15 @@ class Server:
             start_response(code, [("Content-Type", content_type[1])])
             return [body]
         elif isinstance(result, bytes):
-            raise NotImplementedError("Raw bytestream not supported for WSGI; emit Header() first or use Response or SimpleResponse")
+            raise NotImplementedError(
+                "Raw bytestream not supported for WSGI; emit Header() first or use Response or SimpleResponse"
+            )
         else:
             # iterable, check for first item as header
             # for now, not allowed
-            raise NotImplementedError("Iterable not yet supported for WSGI; use Response or SimpleResponse")
+            raise NotImplementedError(
+                "Iterable not yet supported for WSGI; use Response or SimpleResponse"
+            )
 
     # have Response object:
     # start_response()
