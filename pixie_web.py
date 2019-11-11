@@ -103,9 +103,9 @@ class Request:
     Object created from a HTTP request.
     """
 
-    def __init__(self, headers: Union[bytes, dict], init=False):
+    def __init__(self, headers, init=False):
         if type(headers) is dict:
-            self._headers = headers
+            self._headers: dict = headers
             self._raw_data = None
             self._body = None
             self.request = (
@@ -113,7 +113,6 @@ class Request:
                 headers["REQUEST_URI"],
                 headers["SERVER_PROTOCOL"],
             )
-            # TODO: add body data reader
             return
 
         self.raw_data = headers
@@ -362,11 +361,11 @@ def simple_response(
     """
 
     if body is None:
-        body: bytes = b""
+        body_as_bytes = b""
     else:
         if type(body) is str:
-            body: bytes = body.encode("utf-8")  # type: ignore
-        length = len(body)
+            body_as_bytes = body.encode("utf-8")  # type: ignore
+        length = len(body_as_bytes)
         if not headers:
             headers = {}
         headers["Content-Length"] = length
@@ -386,11 +385,13 @@ def simple_response(
             f"HTTP/1.1 {code} {http_codes[code]}\r\nContent-Type: {content_type}{header_str}{cookie_str}\r\n\r\n",
             "utf-8",
         )
-        + body
+        + body_as_bytes
     )
+
 
 class Header(bytes):
     pass
+
 
 def header(
     code: int = 200, content_type: str = "text/html", headers: Optional[dict] = None
@@ -647,12 +648,18 @@ class Server:
             start_response(code, [("Content-Type", content_type[1])])
             return [body]
         elif isinstance(result, bytes):
-            # Raw bytestream, ostensibly with header
-            raise NotImplementedError("Bytestream not yet supported for WSGI; use Response or SimpleResponse for WSGI")
+            # Assume we're dealing with a pure-bytes reponse.
+            head, body = result.split(b"\r\n\r\n", 1)
+            response_type, content_type = head.split(b"\r\n", 2)
+            protocol, code = response_type.split(b" ", 1)
+            # next, content-type
+            content_type = content_type.split(b": ", 1)
+            start_response(code, [("Content-Type", content_type[1])])
+            return [body]
         else:
             # iterable, check for first item as header
             # for now, not allowed
-            raise NotImplementedError("Use Response or SimpleResponse for WSGI")
+            raise NotImplementedError("Iterable not yet supported for WSGI; use Response or SimpleResponse")
 
     # have Response object:
     # start_response()
