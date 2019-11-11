@@ -103,7 +103,19 @@ class Request:
     Object created from a HTTP request.
     """
 
-    def __init__(self, headers: bytes, init=False):
+    def __init__(self, headers: Union[bytes, dict], init=False):
+        if type(headers) is dict:
+            self._headers = headers
+            self._raw_data = None
+            self._body = None
+            self.request = (
+                headers["REQUEST_METHOD"],
+                headers["REQUEST_URI"],
+                headers["SERVER_PROTOCOL"],
+            )
+            # TODO: add body data reader
+            return
+
         self.raw_data = headers
         self._headers = self._form = self._body = None
         if init:
@@ -250,6 +262,12 @@ class Response:
             self.body, self.code, self.content_type, self.headers, self.cookies
         )
 
+    def start_response(self):
+        return [
+            f"{self.code} {http_codes[self.code]}",
+            [("Content-Type", self.content_type)],
+        ]
+
 
 class Unsafe:
     def __init__(self, data: str):
@@ -324,24 +342,30 @@ def cached_file(
     return static_file(path, root, max_age)
 
 
+class SimpleResponse(bytes):
+    pass
+
+
 def simple_response(
     body: Union[str, bytes, None],
     code: int = 200,
     content_type: Optional[str] = "text/html",
     headers: Optional[dict] = None,
     cookies: Optional[http_cookies.SimpleCookie] = None,
-) -> bytes:
+) -> SimpleResponse:
     """
     Generate a simple response object (a byte stream) from either a string or a bytes object. Use `content_type` to set the Content-Type: header, `code` to set the HTTP response code, and pass a dict to `headers` to set other headers as needed.
 
     Use this when you want to simply return a byte sequence as your response, without needing to manipulate the results too much. You can also use this to `yield` headers, and then pieces of a body (as simple `bytes` objects), when you want to return results incrementally.
+
+    You should not use a `simple_response` in any situation where you might be returning results through WSGI.
     """
 
     if body is None:
-        body = b""
+        body: bytes = b""
     else:
         if type(body) is str:
-            body = body.encode("utf-8")  # type: ignore
+            body: bytes = body.encode("utf-8")  # type: ignore
         length = len(body)
         if not headers:
             headers = {}
@@ -357,19 +381,21 @@ def simple_response(
     else:
         cookie_str = ""
 
-    return (
-        bytes(  # type: ignore
+    return SimpleResponse(
+        bytes(
             f"HTTP/1.1 {code} {http_codes[code]}\r\nContent-Type: {content_type}{header_str}{cookie_str}\r\n\r\n",
             "utf-8",
         )
         + body
     )
 
+class Header(bytes):
+    pass
 
 def header(
     code: int = 200, content_type: str = "text/html", headers: Optional[dict] = None
 ):
-    return simple_response(None, code, content_type, headers)
+    return Header(simple_response(None, code, content_type, headers))
 
 
 path_re_str = "<([^>]*)>"
@@ -391,25 +417,23 @@ class Server:
     template_500 = Template("<h1>Server error in {}</h1><p>{}")
     template_503 = Template("<h1>Server timed out after {} seconds in {}</h1>")
 
-    def error_404(self, request: Request) -> bytes:
+    def error_404(self, request: Request) -> Response:
         """
         Built-in 404: Not Found error handler.
         """
-        return simple_response(self.template_404.render(request.path), code=404)
+        return Response(self.template_404.render(request.path), code=404)
 
-    def error_500(self, request: Request, error: Exception) -> bytes:
+    def error_500(self, request: Request, error: Exception) -> Response:
         """
         Built-in 500: Server Error handler.
         """
-        return simple_response(
-            self.template_500.render(request.path, str(error)), code=500,
-        )
+        return Response(self.template_500.render(request.path, str(error)), code=500,)
 
-    def error_503(self, request: Request) -> bytes:
+    def error_503(self, request: Request) -> Response:
         """
         Built-in 503: Server Timeout handler.
         """
-        return simple_response(
+        return Response(
             self.template_503.render(DEFAULT_TIMEOUT, request.path), code=503,
         )
 
@@ -584,13 +608,55 @@ class Server:
         self.srv = None
 
     def application(self, environ, start_response):
-        pass
+        path = environ["REQUEST_URI"]
+        verb = environ["REQUEST_METHOD"]
+        try:
+            handler, route_type = self.static_routes[path][verb]
+        except KeyError:
+            for route in self.dynamic_routes:
+                if verb != route[1]:
+                    continue
+                route_match = route[0].fullmatch(path)
+                if route_match:
+                    handler, route_type = route[2:4]
+                    parameters = route_match.groups()
+            if (not self.dynamic_routes) or (not route_match):
+                response = Response(f"Not found: {path}", code=404)
+                start_response(*response.start_response())
+                return [response.body]
+        else:
+            parameters = []
 
-        # REQUEST_URI
-        # QUERY_STRING
-        # REQUEST_METHOD
-        # SERVER_PROTOCOL
-        # HTTP_COOKIE
+        if route_type is RouteType.sync:
+            result: Union[bytes, Response, str] = handler(Request(environ), *parameters)
+
+        if result is None:
+            start_response("200 OK", [("Content-Type", "text/plain")])
+            return [b""]
+        elif isinstance(result, Response):
+            start_response(*result.start_response())
+            return [result.body]
+        elif isinstance(result, SimpleResponse):
+            # extract headers from SimpleResponse
+            # first, response code
+            head, body = SimpleResponse.split(b"\r\n\r\n", 1)
+            response_type, content_type = head.split(b"\r\n", 2)
+            protocol, code = response_type.split(b" ", 1)
+            # next, content-type
+            content_type = content_type.split(b": ", 1)
+            start_response(code, [("Content-Type", content_type[1])])
+            return [body]
+        elif isinstance(result, bytes):
+            # Raw bytestream, ostensibly with header
+            raise NotImplementedError("Bytestream not yet supported for WSGI; use Response or SimpleResponse for WSGI")
+        else:
+            # iterable, check for first item as header
+            # for now, not allowed
+            raise NotImplementedError("Use Response or SimpleResponse for WSGI")
+
+    # have Response object:
+    # start_response()
+    # result_iter()
 
     async def connection_handler(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -650,7 +716,7 @@ class Server:
                         handler, route_type = route[2:4]
                         parameters = route_match.groups()
                 if (not self.dynamic_routes) or (not route_match):
-                    write(self.error_404(Request(raw_data)))
+                    write(self.error_404(Request(raw_data)).as_bytes())
                     await drain()
                     continue
             else:
@@ -743,12 +809,14 @@ class Server:
                 result = self.error_500(Request(raw_data), err)
 
             try:
-                if isinstance(result, Response):
+                if result is None:
+                    write(simple_response(b""))
+                elif isinstance(result, Response):
                     write(result.as_bytes())
+                elif isinstance(result, SimpleResponse):
+                    write(result)
                 elif isinstance(result, bytes):
                     write(result)
-                elif result is None:
-                    write(simple_response(b""))
                 else:
                     for _ in result:
                         write(_)

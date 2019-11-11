@@ -14,6 +14,7 @@
   - [Send a `simple_response()` object](#send-a-simple_response-object)
   - [Send a `Response()` object](#send-a-response-object)
 - [Setting cookies](#setting-cookies)
+- [WSGI](#wsgi)
 
 # Getting started
 
@@ -126,6 +127,8 @@ yield header(code=200) # 200 OK
 yield b'Hello world'
 ```
 
+It's often just easiest to use a `simple_response()` object. (See below.)
+
 `Content-Length:` is not generated in the headers here, but you can add that manually to the `header()` function if you know it ahead of time.
 
 ```python
@@ -170,3 +173,24 @@ async def index_async(env):
         "Hello world", cookies={"mycookie": 1},
     )
 ```    
+
+# WSGI
+
+WSGI support for `pixie_web` is still very primitive, but is possible:
+
+```python
+import pixie_web
+
+@pixie_web.route("/", pixie_web.RouteType.sync)
+def index(env):
+    return Response("Hello world")
+
+application = pixie_web.server.application
+```
+
+Current limitations of using WSGI: 
+
+* `pixie_web` only properly supports Response when using WSGI. `simple_response` and `bytes` with a `header()` support is in the works.
+* You can only use `RouteType.sync`.
+
+These limitations will eventually be removed.

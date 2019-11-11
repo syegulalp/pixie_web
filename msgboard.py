@@ -25,7 +25,6 @@ def main(env):
 
 @route("/", RouteType.sync, "POST")
 def main_post(env):
-    print(env.headers)
     msg = ""
     with s_open("w") as db:
         data = db["posts"]
