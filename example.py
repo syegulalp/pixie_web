@@ -4,7 +4,6 @@ from pixie_web import route, run, simple_response, Response, RouteType, proc_env
 @route("/", RouteType.sync)
 def index(env):
     # Use `simple_response` for just a string
-    #return b'Hello world'
     return simple_response(f"Hello world")
 
 
