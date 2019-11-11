@@ -638,24 +638,14 @@ class Server:
             start_response(*result.start_response())
             return [result.body]
         elif isinstance(result, SimpleResponse):
-            # extract headers from SimpleResponse
-            # first, response code
-            head, body = SimpleResponse.split(b"\r\n\r\n", 1)
+            head, body = result.split(b"\r\n\r\n", 1)
             response_type, content_type = head.split(b"\r\n", 2)
             protocol, code = response_type.split(b" ", 1)
-            # next, content-type
             content_type = content_type.split(b": ", 1)
             start_response(code, [("Content-Type", content_type[1])])
             return [body]
         elif isinstance(result, bytes):
-            # Assume we're dealing with a pure-bytes reponse.
-            head, body = result.split(b"\r\n\r\n", 1)
-            response_type, content_type = head.split(b"\r\n", 2)
-            protocol, code = response_type.split(b" ", 1)
-            # next, content-type
-            content_type = content_type.split(b": ", 1)
-            start_response(code, [("Content-Type", content_type[1])])
-            return [body]
+            raise NotImplementedError("Raw bytestream not supported for WSGI; emit Header() first or use Response or SimpleResponse")
         else:
             # iterable, check for first item as header
             # for now, not allowed
