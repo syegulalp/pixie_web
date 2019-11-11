@@ -190,7 +190,7 @@ application = pixie_web.server.application
 
 Current limitations of using WSGI: 
 
-* `pixie_web` only properly supports Response when using WSGI. `simple_response` and `bytes` with a `header()` support is in the works.
+* `pixie_web` only properly supports `Response()` when using WSGI. `simple_response` and `bytes` with a `header()` support is in the works.
 * You can only use `RouteType.sync`.
 
-These limitations will eventually be removed.
+These limitations will eventually be removed or at least better compensated for.
