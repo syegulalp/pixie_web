@@ -2,14 +2,13 @@
 # because `shelve` is not threadsafe, we must run this demo single-threaded
 
 import shelve
-from pixie_web import route, run, Template, template, simple_response, RouteType, Unsafe
+from pixie_web import route, run, Template, simple_response, RouteType
 
-main_template = Template(None, "post.html", "demo")
+main_template = Template(filename="post.html", path="demo")
 
 
-def output(data, notice):
-    msgs = Unsafe("".join(["<li>{}</li>".format(Unsafe(_).esc) for _ in data]))
-    return simple_response(main_template.render(msgs, notice))
+def output(msgs, notice):
+    return simple_response(main_template.render(msgs=msgs, notice=notice))
 
 
 def s_open(flag):

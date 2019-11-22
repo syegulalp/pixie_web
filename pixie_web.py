@@ -268,27 +268,32 @@ class Response:
         ]
 
 
-class Unsafe:
+class Literal:
     def __init__(self, data: str):
-        self.data = data
+        self.data = str(data)
 
     @property
     def esc(self):
         return html.escape(self.data)
 
 
-class Template:
-    def __init__(self, template: Optional[str] = None, filename=None, path=None):
-        if filename:
-            with open(path_join(path, filename), "r") as f:
-                template = f.read()
-        self.template = template
+class Unsafe:
+    def __init__(self, data: str):
+        self.data = str(data)
+
+    def __str__(self):
+        return html.escape(self.data)
+
+
+class SimpleTemplate:
+    def __init__(self, template: str):
+        self.template = template.replace("{{", "{").replace("}}", "}")
 
     def render(self, *a, **ka):
         if a:
             new_a = []
             for _ in a:
-                if isinstance(_, Unsafe):
+                if isinstance(_, Literal):
                     new_a.append(_.data)
                 else:
                     new_a.append(html.escape(str(_)))
@@ -296,15 +301,75 @@ class Template:
 
         if ka:
             for k, v in ka.items():
-                if isinstance(v, Unsafe):
+                if isinstance(v, Literal):
                     ka[k] = v.data
                 else:
                     ka[k] = html.escape(str(v))
             return self.template.format(**ka)
 
 
-def template(string, *a, **ka):
-    return Template(string).render(*a, **ka)
+class Template:
+    indents = re.compile(r"(if|elif|for|while|try|except|else|finally|with|def)\b")
+    braces = re.compile(r"(\{\{([.]*)\}\})")
+
+    def _indent(self):
+        return " " * 4 * self.indent_level
+
+    def __init__(
+        self, template_str: str = None, name: str = "template", filename=None, path=None
+    ):
+        if filename:
+            with open(path_join(path, filename), "r") as f:
+                template = f.read()
+        else:
+            template = str(template_str)
+
+        self.code_lines: list = []
+        self.indent_level = 0
+        self.code_lines.append(self._indent() + "output = []")
+        for _ in template.split("\n"):
+            s_line = _.strip()
+            if not s_line.startswith("%"):
+
+                code_line = _
+
+                if not "{{" in code_line:
+                    code_line = self._indent() + 'output.append("{}")'.format(
+                        _.replace("\\", "\\\\").replace('"', '\\"')
+                    )
+                    self.code_lines.append(code_line)
+                    continue
+
+                if "{{!" in code_line:
+                    code_line = code_line.replace("{{!", "{").replace("}}", "}")
+
+                if "{{" in code_line:
+                    code_line = code_line.replace("{{", "{Unsafe(").replace("}}", ")}")
+
+                code_line = self._indent() + f'output.append(f"{code_line}")'
+                self.code_lines.append(code_line)
+                continue
+
+            code_line = s_line.lstrip("%").lstrip()
+            formatted_line = self._indent() + code_line
+
+            if code_line.startswith("end"):
+                self.indent_level -= 1
+                continue
+
+            if self.indents.match(code_line):
+                self.indent_level += 1
+
+            self.code_lines.append(formatted_line)
+
+        self.code_lines.append(self._indent() + "__result__ = '\\n'.join(output)\n")
+        self.code = "\n".join(self.code_lines)
+        self.code_obj = compile(self.code, f"<template: {name}>", "exec")
+
+    def render(self, **ka):
+        ka.update({"Unsafe": Unsafe})
+        exec(self.code_obj, None, ka)
+        return ka["__result__"]
 
 
 def static_file(
@@ -346,7 +411,7 @@ class SimpleResponse(bytes):
 
 
 def simple_response(
-    body: Union[str, bytes, None],
+    body,
     code: int = 200,
     content_type: Optional[str] = "text/html",
     headers: Optional[dict] = None,
@@ -365,6 +430,8 @@ def simple_response(
     else:
         if type(body) is str:
             body_as_bytes = body.encode("utf-8")  # type: ignore
+        else:
+            body_as_bytes = body
         length = len(body_as_bytes)
         if not headers:
             headers = {}
@@ -414,9 +481,9 @@ class Server:
         self.pool: Optional[ProcessPoolExecutor] = None
         self.proc_env = ProcEnv()
 
-    template_404 = Template("<h1>Path or file not found: {}</h1>")
-    template_500 = Template("<h1>Server error in {}</h1><p>{}")
-    template_503 = Template("<h1>Server timed out after {} seconds in {}</h1>")
+    template_404 = SimpleTemplate("<h1>Path or file not found: {}</h1>")
+    template_500 = SimpleTemplate("<h1>Server error in {}</h1><p>{}")
+    template_503 = SimpleTemplate("<h1>Server timed out after {} seconds in {}</h1>")
 
     def error_404(self, request: Request) -> Response:
         """

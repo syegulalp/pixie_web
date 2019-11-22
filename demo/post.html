@@ -1,6 +1,12 @@
 <!doctype html><html><body>
 
-    <ul>{}</ul>
+    % if msgs:
+    <ul>
+    % for _ in msgs:
+    <li>{{_}}</li>
+    % end
+    </ul>
+    % end
     
     <form action="" method="post">
     <label for="POST-name">Say something:</label>
@@ -8,6 +14,8 @@
     <input type="submit" value="Post">
     </form>
 
-    <p>{}</p>
+    % if notice:
+    <p>{{notice}}</p>
+    % end
     
 </body></html>

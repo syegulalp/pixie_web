@@ -1,9 +1,9 @@
 <!doctype html><html><body>
-<h1>{header}</h1>
+<h1>{{header}}</h1>
 <hr/>
-<p>Request object ID: {request_id}</p></hr>
-<p>Environment object ID: {env_id}</p>
-<p>Process environment is: {proc_env}</p>
+<p>Request object ID: {{request_id}}</p></hr>
+<p>Environment object ID: {{env_id}}</p>
+<p>Process environment is: {{proc_env}}</p>
 
 <hr/>
 <h2>Example pages</h2>
@@ -24,15 +24,22 @@
 <hr/>
 <p><a href="/shutdown">Shutdown server</a></p>
 <hr/>
-<h2>Environment variables:</h2>
 
-<ul>{env_var}</ul><hr/>
-<p>Form input: {form_data}</p>
+<h2>Environment variables:</h2>
+<ul>
+    % for k, v in env_var:
+    <li><b>{{k}}</b>: {{v}}</li>
+    % end
+</ul><hr/>
 
 <form action="" method="post">
 <label for="POST-name">Name:</label>
 <input id="POST-name" type="text" name="name">
 <input type="submit" value="Submit">
 </form>
+
+% if form_data:
+<p>Submitted form input: {{form_data}}</p>
+% end
 
 </body></html>

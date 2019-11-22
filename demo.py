@@ -8,7 +8,7 @@ from pixie_web import (
     cached_file,
     Template,
     RouteType,
-    Unsafe,
+    Literal,
 )
 
 from asyncio import sleep as asyncio_sleep
@@ -18,15 +18,12 @@ body_template = Template(filename="template.html", path="demo")
 
 
 def body(request, text):
-    request_data = "".join(
-        [f"<li><b>{k}</b>: {v}</li>" for k, v in request.headers.items()]
-    )
     return body_template.render(
         header=text,
         request_id=id(request),
         env_id=id(proc_env),
         proc_env=proc_env.proc_type,
-        env_var=Unsafe(request_data),
+        env_var=request.headers.items(),
         form_data=request.form,
     )
 

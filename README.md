@@ -27,6 +27,7 @@ This way, you can quickly direct CPU-reliant traffic to a process pool, I/O-reli
 * Form submissions.
 * Cookies.
 * Incremental/streaming responses in CPU-bound operations by way of `yield`
+* A native, simple template engine (again, a la `bottle`). (Very primitive right now.)
 * Optional external library support:
   * `uvloop`
 
@@ -39,7 +40,6 @@ There are probably many bugs -- bad conformance to HTTP specs, etc.
 ## Possible future features
 
 * Before/after triggers for routes.
-* A native, simple template engine (again, a la `bottle`).
 * Some basic cookie security.
 * Support for external server adapters (WSGI, etc.) instead of only the built-in server.
 * Better cross-process synchronicity features. The assumption right now is that processes in the pool have no shared state.
@@ -90,7 +90,7 @@ See `demo.py` for a more elaborate example and usage. (It's not very pretty but 
 
 [Full documentation here](docs.md).
 
-Also see `msgboard.py` for a primitive message board application using `shelve`, which provides some idea of how form processing works. (Note that there is currently no HTML escaping in form input or variable output.)
+Also see `msgboard.py` for a primitive message board application using `shelve`, which provides some idea of how form processing and our very primitive templating system works.
 
 # License
 
